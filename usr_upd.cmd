@@ -1,0 +1,1 @@
+powershell.exe -noprofile -executionpolicy bypass -file \\chl-proxy\IT\usermanagement\usr_update.ps1 %1 %2
