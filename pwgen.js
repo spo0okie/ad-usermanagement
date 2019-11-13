@@ -138,7 +138,7 @@ ELEMENTS = [
                 if (!isFirst && (Math.random() < 0.3)) {
                     if ( (result.length + str.length) > maxLength)
                         result = result.slice(0,-1);
-                var possible = "!@#$^*()-_+?=./:',";
+                var possible = "!@#$^*()-_+?=./:,";
                 result += possible.charAt(Math.floor(Math.random() * possible.length));
                 requested &= ~INCLUDE_SPECIAL;
 
