@@ -23,12 +23,14 @@ $user_mail=$user.mail.toLower();
 
 $nu_path=$user.distinguishedName.replace($f_OUDN,$u_OUDN)
 $nu_path=$nu_path.substring($nu_path.IndexOf('OU='));
+
 Write-Host "Пользователь $( $user.displayName ) будет воскрешен в $nu_path! *смех злого гения*! (CTRL+C для отмены)"
-Write-Host
 
 if (($user_mail -like "*@"+$mail_domain_alias) -or ($user_mail -like "*@"+$mail_domain)) {
 	Write-Host "Корпоративный ящик будет включен: $user_mail"
 }
+
+$u_passwd=FetchPwInteractive $u_login $Args[1]
 
 for ( $n = 10; $n -ge 0; $n-- ) {
 	Write-Host -NoNewline "$n ... "
@@ -36,14 +38,6 @@ for ( $n = 10; $n -ge 0; $n-- ) {
 }
 Write-Host "Поехали"
 
-$teampass_user = FindUserByLogin $u_login;
-if ( $teampass_user -eq $null ) {
-    Write-Host -ForegroundColor Red "Пользователь $u_login не найдет в БД teampass"
-    exit;
-} else {
-    $u_passwd = $teampass_user.pw
-    Write-Host -ForegroundColor Green "Пользователю $u_login будет установлен пароль $u_passwd из teampass"
-}
 
 if ( -not (PrepareOU $nu_path)) {
 	Write-Host -ForegroundColor Red "Неудача создания папки для восстановления!"

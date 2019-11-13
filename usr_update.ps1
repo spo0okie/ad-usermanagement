@@ -9,8 +9,6 @@ if ( $Args[0] -eq $null ) {
 }
 
 $u_login = $Args[0]
-$u_passwd = $Args[1]
-
 
 Import-Module ActiveDirectory
 . "$($PSScriptRoot)\config.priv.ps1"
@@ -27,13 +25,7 @@ if (($user_mail -like "*@"+$mail_domain_alias) -or ($user_mail -like "*@"+$mail_
 	Write-Host "Пароль на корпоративный ящик будет также изменен: $user_mail"
 }
 
-if ( ($u_passwd -eq "") -or ($u_passwd -eq $null) ){
-	do {
-		$u_passwd = invoke-expression "& cscript.exe //Nologo $workdir\pwgen.js"
-		Write-Host "Сгенерированный пароль :" $u_passwd
-		$pwd_accepted = TimedPrompt "Чтобы сгенерировать другой, нажмите любую клавишу в течении 5х сек..." 5
-	} while	($pwd_accepted)
-}
+$u_passwd=FetchPwInteractive $u_login $Args[1]
 
 Write-host "Устанавливаем пароль $u_passwd (CTRL+C для отмены)"
 for ( $n = 5; $n -ge 0; $n-- ) {

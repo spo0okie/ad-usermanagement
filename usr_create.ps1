@@ -47,15 +47,7 @@ Write-host "Почта: $u_mail"
 Write-host "Тел: $u_phone / $u_pager"
 
 
-if ($u_passwd -eq "") {
-	do {
-		#$pwgen=
-		$u_passwd = invoke-expression "& cscript.exe //Nologo $workdir\pwgen.js"
-		#$u_passwd = New-SWRandomPassword -Count 1 -PasswordLength 8 -FirstChar 'ABCEFGHJKLMNPQRSTUVWXYZ' -InputStrings  @('abcdefghijkmnpqrstuvwxyz','23456789', '!,-=(){}_.')
-		Write-Host "Сгенерированный пароль :" $u_passwd
-		$pwd_accepted = TimedPrompt "Чтобы сгенерировать другой, нажмите любую клавишу в течении 5х сек..." 5
-	} while	($pwd_accepted)
-}
+$u_passwd=FetchPwInteractive $u_login $u_passwd
 
 Log ("Pasword generated")
 
