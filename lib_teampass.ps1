@@ -135,3 +135,33 @@ function UserSet() {
 		UserAdd -login $login -passwd $passwd -mail $mail -name $name -position $position
 	}
 }
+
+function FetchPwInteractive() {
+	param
+	(
+		[string]$u_login,
+		[string]$u_passwd
+	)
+
+	if ( ($u_passwd -eq "") -or ($u_passwd -eq $null) ){
+		$teampass_user = FindUserByLogin $u_login;
+		if ( $teampass_user -eq $null ) {
+			Write-Host -ForegroundColor Red "Пользователь $u_login не найден в БД teampass"
+			$initial_pwd=$false
+		} else {
+			$u_passwd = $teampass_user.pw
+			Write-Host -ForegroundColor Green "Пользователю $u_login будет установлен пароль $u_passwd из teampass"
+			$initial_pwd=$true
+		}
+	} else { $initial_pwd=$true }
+
+	do {
+		if ( $initial_pwd -eq $false ) {
+			$u_passwd = invoke-expression "& cscript.exe //Nologo $workdir\pwgen.js"
+		}
+		Write-Host "Устанавливаемый пароль :" $u_passwd
+		$initial_pwd=$false
+		$pwd_accepted = TimedPrompt "Чтобы сгенерировать другой, нажмите любую клавишу в течении 5х сек..." 5
+	} while	($pwd_accepted)
+	return $u_passwd
+}
