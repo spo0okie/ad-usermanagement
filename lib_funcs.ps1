@@ -1,3 +1,17 @@
+#Текущее время в UTC
+function getUTCNow() {
+    return (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss")
+}
+
+
+function varDump() {
+    param (
+        [object]$var
+    )
+    Write-Host -ForegroundColor Magenta ($var | Format-List | Out-String)
+}
+
+
 #выводит сообщение в лог файл
 #пришлось взять идиотское название, т.к. в каком-то месте у меня вызов Log както конфликтнул с 
 #Get-Log от VMWare
@@ -11,8 +25,8 @@ function spooLog()
 	if ($show_date) {
 		$now=Get-Date
 	}
-	if ($logfile) {
-		"$now $msg" | Out-File -filePath $logfile -append -encoding Default
+	if ($global:logfile) {
+		"$now $msg" | Out-File -filePath "$global:logfile" -append -encoding Default
 	}
 	Write-Host $now $msg
 }
@@ -27,6 +41,90 @@ function Log()
 	)
 	spooLog $msg $show_date
 }
+
+
+#выводит сообщение об ошибке в лог файл
+function errorLog()
+{
+	param
+	(
+		[string]$msg,
+		[boolean]$show_date = $true
+	)
+
+	if ($show_date) {
+		$now=Get-Date
+	}
+
+    #если логфайл есть, то пишем его
+	if ($global:logfile) {
+		"$now ERROR: $msg" | Out-File -filePath "$global:logfile" -append -encoding Default
+	}
+
+    #если есть логфайл для ошибок - пишем его
+	if ($global:errorLogfile) {
+		"$now $msg" | Out-File -filePath "$global:errorLogfile" -append -encoding Default
+	}
+
+    #если есть массив ошибок - добавляем в него
+    if ($global:scriptErrorsArray) {
+        $global:scriptErrorsArray += $msg
+    }
+
+    #выставляем флажок что была ошибка
+    $global:scriptErrorsFlag = 1
+
+	Write-Host -foregroundColor red $now "ERROR:" $msg
+}
+
+#выводит сообщение об ошибке в лог файл
+function warningLog()
+{
+	param
+	(
+		[string]$msg,
+		[boolean]$show_date = $true
+	)
+
+	if ($show_date) {
+		$now=Get-Date
+	}
+
+    #если логфайл есть, то пишем его
+	if ($global:logfile) {
+		"$now WARNING: $msg" | Out-File -filePath "$global:logfile" -append -encoding Default
+	}
+
+    #если есть логфайл для ошибок - пишем его
+	if ($global:warningLogfile) {
+		"$now $msg" | Out-File -filePath "$global:warningLogfile" -append -encoding Default
+	}
+
+    #если есть массив ошибок - добавляем в него
+    if ($global:scriptWarningsArray) {
+        $global:scriptWarningsArray += $msg
+    }
+
+    #выставляем флажок что была ошибка
+    $global:scriptWarningsFlag = 1
+
+	Write-Host -foregroundColor Yellow $now "WARNING:" $msg
+}
+
+
+#выводит сообщение об ошибке в лог файл
+function debugLog()
+{
+	param
+	(
+		[string]$msg
+	)
+
+	if ($global:DEBUG_MODE -and $global:DEBUG_MODE -gt 0) {
+        spooLog $msg
+    }
+}
+
 
 
 function New-SWRandomPassword {
