@@ -1,5 +1,7 @@
 #выводит сообщение в лог файл
-function Log()
+#пришлось взять идиотское название, т.к. в каком-то месте у меня вызов Log както конфликтнул с 
+#Get-Log от VMWare
+function spooLog()
 {
 	param
 	(
@@ -9,8 +11,21 @@ function Log()
 	if ($show_date) {
 		$now=Get-Date
 	}
-	"$now $msg" | Out-File -filePath $logfile -append -encoding Default
+	if ($logfile) {
+		"$now $msg" | Out-File -filePath $logfile -append -encoding Default
+	}
 	Write-Host $now $msg
+}
+
+#для совместимости оставим это, чтобы не переписывать все остальные скрипты, которым не нужен VMWare
+function Log()
+{
+	param
+	(
+		[string]$msg,
+		[boolean]$show_date = $true
+	)
+	spooLog $msg $show_date
 }
 
 
@@ -187,3 +202,134 @@ Function TimedPrompt($prompt,$secondsToWait){
 	Write-Host "`r`n"
 	return $true;
 }
+
+
+#приводит телефон к виду +7(987)654-3210
+function correctMobile() {
+	param (
+		[string]$number
+	)
+
+	#убираем пробелы и вообще все
+	if ($number.Length -le 3) {
+		return $number
+	}
+
+	$number=$number.Replace(' ','').Replace('-','').Replace('.','').Replace('+','')
+	#Log($original+": clean ["+$number+"]")
+
+	#проверяем что цифр 11	
+	#if ( -not ($number.Replace('+','').Replace('(','').Replace(')','').Length -eq 11)) {
+		#Log($original+": numbers ["+$number.Replace('+','').Replace('(','').Replace(')','')+"]")
+		#Log($original+": numberscount ["+$number.Replace('+','').Replace('(','').Replace(')','').Length+"]")
+	#	return $original
+	#}
+
+
+	#810375 -> +375XXX
+	if (
+		($number.Substring(0,3) -eq "810") -and
+		($number.Replace(')','').Replace('(','').Length -gt 11)	
+	) {
+		$number=$number.Substring(3)
+	}
+	
+
+	if (
+		($number.Replace(')','').Replace('(','').Length -eq 11)	
+	) {
+		#$number.Replace(')','').Replace('(','').Length
+		#8XXX -> 7XXX
+		if ($number.Substring(0,1) -eq "8") {
+			$number="7"+$number.Substring(1)			
+		}
+
+		#проверяем что скобочки есть и они расставлены правильно
+		$leftBracket=$number.IndexOf("(")
+		$rightBracket=$number.IndexOf(")")
+		#$leftBracket,$rightBracket
+		if ( ($leftBracket -le 0) -or ($rightBracket -le 0) -or ($rightBracket -lt $leftBracket) ) {
+			#"HOHOHO"
+			$number=$number.Replace('(','').Replace(')','')
+			$countryCode=$number.Substring(0,1);
+			$cityCode=$number.Substring(1,3);
+			$localCode=$number.Substring(4);
+			$number=$countryCode+'('+$cityCode+')'+$localCode
+			$rightBracket=$number.IndexOf(")")
+		}
+
+		#проверяем знак тире
+		$minusLeft=$number.Substring(0,$rightBracket+4)
+		$minusRight=$number.Substring($rightBracket+4)
+	 	$number = $minusLeft+'-'+$minusRight
+	}
+
+	return "+" + $number
+
+}
+
+#Разбивает строку на список телефонов через запятую
+#каждому телефону проводит коррекцию написания
+#собирает обратно обрезая невлезающие в 64 символа
+function correctPhonesList() {
+	param
+	(
+		[string]$nums
+	)
+	$arnums=$nums -split ','
+	$out=@()
+	for ( $i = 0; $i -lt $arnums.Count; $i++ ) {
+		$num = correctMobile( $arnums[$i] )
+		if ((($out -join ',').Length + $num.Length) -lt 63) {
+			$out+=$num
+		}
+	}
+	return $out -join ','
+}
+
+
+function setGroupByDepartment() {
+	param
+	(
+		[string]$group,
+		[string]$department,
+		[string]$OUDN
+	)
+	#добваляем новых
+	foreach ($user in Get-ADUser -Filter {department -eq $department} -SearchBase $OUDN) {
+		#Write-Host -ForegroundColor green $user
+		Add-ADGroupMember -Identity $group -Member $user.samaccountname -ErrorAction SilentlyContinue -Confirm:$false
+	}
+
+	#удаляем лишних
+	Get-ADGroupMember -Identity $group| Where-Object { $_.objectClass -eq 'user' } | Get-ADUser -Properties * | ForEach-Object {
+		if( $_.department -ne $department) {
+			#Write-Host -ForegroundColor red "$( $_ ) $( $_.department )"
+			Remove-ADGroupMember -Identity $group -Member $_.samaccountname -Confirm:$false
+		}
+	}
+}
+
+function setGroupBy2Departments() {
+	param
+	(
+		[string]$group,
+		[string]$department1,
+		[string]$department2,
+		[string]$OUDN
+	)
+	#добваляем новых
+	foreach ($user in Get-ADUser -Filter {(department -eq  $department1) -or (department -eq $department2)} -SearchBase $OUDN) {
+		#Write-Host -ForegroundColor green $user
+		Add-ADGroupMember -Identity $group -Member $user.samaccountname -ErrorAction SilentlyContinue -Confirm:$false
+	}
+
+	#удаляем лишних
+	Get-ADGroupMember -Identity $group| Where-Object { $_.objectClass -eq 'user' } | Get-ADUser -Properties * | ForEach-Object {
+		if( ($_.department -ne $department1) -and ($_.department -ne $department2)) {
+			#Write-Host -ForegroundColor red "$( $_ ) $( $_.department )"
+			Remove-ADGroupMember -Identity $group -Member $_.samaccountname -Confirm:$false
+		}
+	}
+}
+

@@ -63,23 +63,29 @@ function DisableADUser() {
 	)
 
 	$nu_path=$user.distinguishedName.replace($u_OUDN,$f_OUDN)
-    $nu_path=$nu_path.substring($nu_path.IndexOf('OU='));
+	$nu_path=$nu_path.substring($nu_path.IndexOf('OU='));
 
-    if ( -not (PrepareOU $nu_path)) {
-	    Write-Host -ForegroundColor Red "Неудача создания папки для уволенных!"
-        Exit
-    }
+	if ( -not (PrepareOU $nu_path)) {
+		Write-Host -ForegroundColor Red "Неудача создания папки для уволенных!"
+		Exit
+	}
 
 
 	Write-Host "Генерим пароль..."
-	$u_passwd = New-SWRandomPassword -Count 1 -PasswordLength 8 -FirstChar 'ABCEFGHJKLMNPQRSTUVWXYZ' -InputStrings  @('abcdefghijkmnpqrstuvwxyz','23456789', '!,-=(){}_.')
+	$u_passwd = New-SWRandomPassword -Count 1 -PasswordLength 15 -FirstChar 'ABCEFGHJKLMNPQRSTUVWXYZ' -InputStrings  @('abcdefghijkmnpqrstuvwxyz','23456789', '!,-=(){}_.')
 	$u_pass= ConvertTo-SecureString -AsPlainText $u_passwd -force
 
-	Write-Host "Сбрасываем пароль..."
-	Set-ADAccountPassword $user -NewPassword $u_pass
+	Write-Host "Сбрасываем пароль... $u_passwd"
+	Set-ADAccountPassword $user -Reset -NewPassword $u_pass
 
 	Write-Host "Отключаем пользователя..."
 	Disable-ADAccount $user
+
+	if ( $dismiss_groups.count -gt 0) {
+		foreach($groupname in $dismiss_groups) {
+			Remove-ADGroupMember -Identity $groupname -Member $user.samaccountname -Confirm:$false
+		}
+	}
 
 
 	Write-Host -ForegroundColor Yellow "Перемещаем в $nu_path"
